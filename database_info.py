@@ -2,16 +2,14 @@ import tkinter as tk
 from tkinter import ttk
 from connection import get_connection
 
-
 def tablo_yukle(tree, tabloadi):
-    # Önce her şeyi temizle
+    # Veritabanı tablosunu TreeView'a yükler
     tree.delete(*tree.get_children())
     tree["columns"] = ()
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Kolon isimlerini HER ZAMAN al
     cursor.execute(f"PRAGMA table_info({tabloadi})")
     kolonlar = [k[1] for k in cursor.fetchall()]
 
@@ -22,12 +20,10 @@ def tablo_yukle(tree, tabloadi):
         tree.heading(col, text=col)
         tree.column(col, width=130, anchor="center")
 
-    # Veriler (boş olabilir)
     cursor.execute(f"SELECT * FROM {tabloadi}")
     veriler = cursor.fetchall()
 
     if not veriler:
-        # Boş tablo mesajı
         tree.insert(
             "",
             tk.END,
@@ -39,14 +35,10 @@ def tablo_yukle(tree, tabloadi):
 
     conn.close()
 
-# -------------------------------------------------
-# GUI
-# -------------------------------------------------
 pencere = tk.Tk()
 pencere.title("Staj Yerleştirme Sistemi")
 pencere.geometry("1100x600")
 
-# Style (grid çizgileri için)
 style = ttk.Style()
 style.theme_use("default")
 

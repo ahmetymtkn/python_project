@@ -2,7 +2,10 @@ from connection import get_connection
 import siniflar
 
 class Classification:
+    # Veritabanından veri çeker ve nesnelere dönüştürür
+    
     def get_ogrenciler(self):
+        # Tüm öğrencileri nota göre sıralı getirir
         try:
             conn = get_connection()  
             cursor = conn.cursor()
@@ -16,6 +19,7 @@ class Classification:
         return [siniflar.Ogrenciler(*row) for row in ogrenciler]
 
     def get_firmalar(self):
+        # Tüm firmaları getirir
         try:  
             conn = get_connection()  
             cursor = conn.cursor()
@@ -29,6 +33,7 @@ class Classification:
         return [siniflar.Firmalar(*row) for row in firmalar]
     
     def get_firma_ogrenciler(self, firma_id):
+        # Belirli bir firmaya yerleşen öğrencileri getirir
         try:
             conn = get_connection() 
             cursor = conn.cursor()

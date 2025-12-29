@@ -1,11 +1,14 @@
 from connection import get_connection
 import classification
 import random
+
 class Simulation:
+    # Yerleştirme sonrası simülasyon işlemlerini yönetir
     def __init__(self):
         self.classification = classification.Classification()
 
     def reject_simulation(self):
+        # Her firmadan rastgele sayıda öğrenci reddeder
         conn = get_connection()
         cursor = conn.cursor()
         firmalar = self.classification.get_firmalar()
@@ -30,6 +33,7 @@ class Simulation:
         conn.close()
 
     def reduce_min_ort(self):
+        # Tüm firmaların minimum ortalama şartını %10 düşürür
         conn = get_connection()
         cursor = conn.cursor()
         firmalar = self.classification.get_firmalar()

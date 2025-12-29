@@ -1,11 +1,12 @@
 from connection import get_connection
 import pandas as pd
 
-
 class ExportService:
+    # Veritabanı verilerini farklı formatlara aktarır
     
-    def export_data_yerlesenler(self,file_path="yerlesenler.xlsx",format='excel'):
-        conn =get_connection()
+    def export_data_yerlesenler(self, file_path="yerlesenler.xlsx", format='excel'):
+        # Yerleşen öğrencileri belirtilen formatta dışa aktarır
+        conn = get_connection()
         sql="SELECT o.ogrenci_adi, o.ort, f.firma_adi, o.durum FROM ogrenciler o left join firmalar f on o.yerlesen_firma_id=f.id"
         df=pd.read_sql_query(sql, conn)
         if format=='excel':
@@ -18,7 +19,8 @@ class ExportService:
 
 
     
-    def export_data_yerlesemeyenler(self,file_path="yerlesemeyenler.xlsx",format='excel'):
+    def export_data_yerlesemeyenler(self, file_path="yerlesemeyenler.xlsx", format='excel'):
+        # Yerleşemeyen öğrencileri belirtilen formatta dışa aktarır
         conn = get_connection()
         sql="SELECT o.ogrenci_adi, o.ort, o.durum FROM ogrenciler o  WHERE o.durum='Yerlesemedi'"
         df=pd.read_sql_query(sql, conn)

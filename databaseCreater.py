@@ -2,6 +2,7 @@
 from connection import get_connection
 
 def veritabani_hazirla():
+    # Veritabanı tablolarını oluşturur
     conn = get_connection()
     cursor = conn.cursor()
 

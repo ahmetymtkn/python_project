@@ -1,19 +1,23 @@
 ﻿import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, ttk, simpledialog
 from ImportService import ImportService
 from simulation import Simulation
 from ExportService import ExportService
+from RandomDataGenerator import RandomDataGenerator
+from connection import get_connection
 import sys
 from io import StringIO
 
 class Gui:
+    # Staj eşleştirme sisteminin arayüzünü yönetir
     def __init__(self):
         self.simulation = Simulation()
         self.import_service = ImportService()
         self.export_service = ExportService()
+        self.random_generator = RandomDataGenerator()
         self.root = tk.Tk()
         self.root.title("Staj Eşleştirme Sistemi")
-        self.root.geometry("900x600")
+        self.root.geometry("1100x700")
         
         # Dosya yükleme durumları
         self.firma_yuklendi = False
@@ -22,7 +26,7 @@ class Gui:
         self.setup_dosya_yukleme()
     
     def setup_dosya_yukleme(self):
-        """Adım 1: Dosya Yükleme Ekranı"""
+        """Adım 1: Veri Yükleme Ekranı - Geliştirilmiş"""
         self.clear_screen()
         
         # Ana container
@@ -30,159 +34,487 @@ class Gui:
         container.pack(fill='both', expand=True)
         
         # Sol panel - Butonlar
-        left_frame = tk.Frame(container, width=300, padx=20, pady=20)
+        left_frame = tk.Frame(container, width=350, padx=20, pady=20)
         left_frame.pack(side='left', fill='y')
         left_frame.pack_propagate(False)
         
         # Başlık
-        tk.Label(left_frame, text="Dosya Yükleme", font=("Arial", 16, "bold")).pack(pady=20)
+        tk.Label(left_frame, text="Veri Yükleme", font=("Arial", 16, "bold")).pack(pady=15)
+        
+        # Bölüm 1: Dosyadan Import
+        tk.Label(left_frame, text="━━━ Dosyadan İçe Aktar ━━━", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(10,5))
         
         # Firmalar butonu
-        self.firma_btn = tk.Button(left_frame, text="Firmalar Dosyası Seç", 
+        self.firma_btn = tk.Button(left_frame, text="📁 Firmalar Dosyası Seç", 
                                    command=lambda: self.dosya_sec("firmalar"),
-                                   bg="#4CAF50", fg="white", width=25, height=2)
-        self.firma_btn.pack(pady=10)
+                                   bg="#4CAF50", fg="white", width=28, height=2)
+        self.firma_btn.pack(pady=5)
         
         # Öğrenciler butonu
-        self.ogrenci_btn = tk.Button(left_frame, text="Öğrenciler Dosyası Seç", 
+        self.ogrenci_btn = tk.Button(left_frame, text="📁 Öğrenciler Dosyası Seç", 
                                      command=lambda: self.dosya_sec("ogrenciler"),
-                                     bg="#2196F3", fg="white", width=25, height=2)
-        self.ogrenci_btn.pack(pady=10)
+                                     bg="#2196F3", fg="white", width=28, height=2)
+        self.ogrenci_btn.pack(pady=5)
         
-        # Simulation başlat butonu (başta gizli)
-        self.sim_start_btn = tk.Button(left_frame, text="Simülasyon Başlat >", 
-                                       command=self.setup_simulation,
-                                       bg="#FFA500", fg="white", width=25, height=2)
-        self.sim_start_btn.pack(pady=20)
-        self.sim_start_btn.pack_forget()  # Gizle
+        # Bölüm 2: Random Veri Oluştur
+        tk.Label(left_frame, text="━━━ Rastgele Veri Oluştur ━━━", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(20,5))
         
-        # Sağ panel - Log alanı
-        self.setup_log_panel(container)
-        
-        self.log("Sistem hazır. Lütfen dosyaları yükleyin...")
-    
-    def setup_simulation(self):
-        """Adım 2: Simülasyon Seçenekleri Ekranı"""
-        self.clear_screen()
-        
-        # Ana container
-        container = tk.Frame(self.root)
-        container.pack(fill='both', expand=True)
-        
-        # Sol panel - Butonlar
-        left_frame = tk.Frame(container, width=300, padx=20, pady=20)
-        left_frame.pack(side='left', fill='y')
-        left_frame.pack_propagate(False)
-        
-        # Başlık
-        tk.Label(left_frame, text="Simülasyon Seçenekleri", font=("Arial", 16, "bold")).pack(pady=20)
-        
-        # Greedy butonu
-        tk.Button(left_frame, text="Greedy Algoritması", 
-                 command=self.run_greedy,
-                 bg="#4CAF50", fg="white", width=25, height=2).pack(pady=8)
-        
-        # Heuristik butonu
-        tk.Button(left_frame, text="Heuristik Algoritması", 
-                 command=self.run_heuristik,
-                 bg="#2196F3", fg="white", width=25, height=2).pack(pady=8)
-        
-        # Reject Simulation butonu
-        tk.Button(left_frame, text="Reject Simülasyonu", 
-                 command=self.run_reject,
-                 bg="#FF5722", fg="white", width=25, height=2).pack(pady=8)
-        
-        # Ort Düşür butonu
-        tk.Button(left_frame, text="Min Ortalama Düşür (%10)", 
-                 command=self.run_ort_dusur,
-                 bg="#FF9800", fg="white", width=25, height=2).pack(pady=8)
+        # Random veri oluştur butonu
+        tk.Button(left_frame, text="🎲 Random Veri Oluştur", 
+                 command=self.show_random_data_dialog,
+                 bg="#9C27B0", fg="white", width=28, height=2).pack(pady=5)
         
         # Ayırıcı
-        tk.Label(left_frame, text="").pack(pady=5)
+        tk.Label(left_frame, text="━━━━━━━━━━━━━━━━━━━━", 
+                font=("Arial", 10), fg="#ccc").pack(pady=(20,5))
         
-        # Sonuçları Göster butonu
-        tk.Button(left_frame, text=" Sonuçları Göster", 
-                 command=self.show_results,
-                 bg="#00BCD4", fg="white", width=25, height=2).pack(pady=8)
+        # Veritabanını Temizle
+        tk.Button(left_frame, text="🗑️ Veritabanını Temizle", 
+                 command=self.clear_database,
+                 bg="#F44336", fg="white", width=28, height=2).pack(pady=5)
         
-        # Export butonu
-        tk.Button(left_frame, text="Export Et >", 
-                 command=self.setup_export,
-                 bg="#9C27B0", fg="white", width=25, height=2).pack(pady=20)
+        # Simulation başlat butonu (başta gizli)
+        self.sim_start_btn = tk.Button(left_frame, text="▶ Simülasyon Başlat", 
+                                       command=self.setup_simulation,
+                                       bg="#FFA500", fg="white", width=28, height=2,
+                                       font=("Arial", 10, "bold"))
         
-        # Sağ panel - Log alanı
-        self.setup_log_panel(container)
+        # Eğer veriler yüklüyse butonu göster
+        if self.firma_yuklendi and self.ogrenci_yuklendi:
+            self.sim_start_btn.pack(pady=(20,10))
+        else:
+            self.sim_start_btn.pack(pady=(20,10))
+            self.sim_start_btn.pack_forget()  # Gizle
         
-        self.log("Simülasyon ekranı hazır. Algoritma seçin...")
+        # Sağ panel - Bilgi paneli
+        self.setup_info_panel(container)
+        
+        self.update_info_panel()
     
-    def setup_export(self):
-        """Adım 3: Export Format Seçimi Ekranı"""
+    def setup_simulation(self):
+        # Simülasyon ve algoritma seçenekleri ekranını oluşturur
         self.clear_screen()
         
-        # Ana container
         container = tk.Frame(self.root)
         container.pack(fill='both', expand=True)
         
-        # Sol panel - Butonlar
-        left_frame = tk.Frame(container, width=300, padx=20, pady=20)
+        left_frame = tk.Frame(container, width=350, padx=20, pady=20)
         left_frame.pack(side='left', fill='y')
         left_frame.pack_propagate(False)
         
-        # Başlık
-        tk.Label(left_frame, text="Export Formatı Seçin", font=("Arial", 16, "bold")).pack(pady=20)
+        tk.Label(left_frame, text="Simülasyon Seçenekleri", font=("Arial", 16, "bold")).pack(pady=15)
         
-        # Excel butonu
-        tk.Button(left_frame, text="Excel (.xlsx)", 
-                 command=lambda: self.export("excel"),
-                 bg="#217346", fg="white", width=25, height=2).pack(pady=8)
+        tk.Label(left_frame, text="Yerleştirme Algoritmaları", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(10,5))
         
-        # CSV butonu
-        tk.Button(left_frame, text="CSV (.csv)", 
-                 command=lambda: self.export("csv"),
-                 bg="#4CAF50", fg="white", width=25, height=2).pack(pady=8)
+        tk.Button(left_frame, text="Greedy Algoritması", 
+                 command=self.run_greedy,
+                 bg="#4CAF50", fg="white", width=28, height=2).pack(pady=5)
         
-        # JSON butonu
-        tk.Button(left_frame, text="JSON (.json)", 
-                 command=lambda: self.export("json"),
-                 bg="#FF9800", fg="white", width=25, height=2).pack(pady=8)
+        tk.Button(left_frame, text="Heuristik Algoritması", 
+                 command=self.run_heuristik,
+                 bg="#2196F3", fg="white", width=28, height=2).pack(pady=5)
         
-        # Geri dön butonu
-        tk.Button(left_frame, text="← Geri Dön", 
-                 command=self.setup_simulation,
-                 bg="#757575", fg="white", width=25, height=2).pack(pady=20)
+        tk.Label(left_frame, text="Simülasyon İşlemleri", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(15,5))
         
-        # Sağ panel - Log alanı
-        self.setup_log_panel(container)
+        tk.Button(left_frame, text="Reject Simülasyonu", 
+                 command=self.run_reject,
+                 bg="#FF5722", fg="white", width=28, height=2).pack(pady=5)
         
-        self.log("Export ekranı hazır. Format seçin...")
+        tk.Button(left_frame, text="Min Ortalama Düşür (%10)", 
+                 command=self.run_ort_dusur,
+                 bg="#FF9800", fg="white", width=28, height=2).pack(pady=5)
+        
+        tk.Label(left_frame, text="Sonuçlar ve Raporlar", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(15,5))
+        
+        tk.Button(left_frame, text="Export Et", 
+                 command=self.setup_export,
+                 bg="#9C27B0", fg="white", width=28, height=2,
+                 font=("Arial", 10, "bold")).pack(pady=(15,5))
+        
+        tk.Button(left_frame, text="Geri Dön", 
+                 command=self.setup_dosya_yukleme,
+                 bg="#757575", fg="white", width=28, height=2).pack(pady=(10,5))
+        
+        # Sağ panel - Bilgi paneli
+        self.setup_info_panel(container)
+        
+        self.update_info_panel()
     
-    def setup_log_panel(self, parent):
-        """Sağ panel - Log/Konsol çıktısı alanı"""
-        right_frame = tk.LabelFrame(parent, text="Log / Konsol Çıktısı", padx=10, pady=10)
+    def setup_export(self):
+        # Export format seçim ekranını oluşturur
+        self.clear_screen()
+        
+        container = tk.Frame(self.root)
+        container.pack(fill='both', expand=True)
+        
+        left_frame = tk.Frame(container, width=350, padx=20, pady=20)
+        left_frame.pack(side='left', fill='y')
+        left_frame.pack_propagate(False)
+        
+        tk.Label(left_frame, text="Export Seçenekleri", font=("Arial", 16, "bold")).pack(pady=15)
+        
+        tk.Label(left_frame, text="Format Seçin", 
+                font=("Arial", 10, "bold"), fg="#555").pack(pady=(10,5))
+        
+        tk.Button(left_frame, text="Excel (.xlsx)", 
+                 command=lambda: self.show_export_options("excel"),
+                 bg="#217346", fg="white", width=28, height=2).pack(pady=5)
+        
+        tk.Button(left_frame, text="CSV (.csv)", 
+                 command=lambda: self.show_export_options("csv"),
+                 bg="#4CAF50", fg="white", width=28, height=2).pack(pady=5)
+        
+        tk.Button(left_frame, text="JSON (.json)", 
+                 command=lambda: self.show_export_options("json"),
+                 bg="#FF9800", fg="white", width=28, height=2).pack(pady=5)
+        
+        tk.Button(left_frame, text="Geri Dön", 
+                 command=self.setup_simulation,
+                 bg="#757575", fg="white", width=28, height=2).pack(pady=(20,5))
+        
+        # Sağ panel - Veritabanı Bilgisi
+        self.setup_database_info_panel(container)
+        
+        self.update_database_info()
+    
+    def setup_info_panel(self, parent):
+        # Veritabanı bilgi panelini oluşturur
+        right_frame = tk.LabelFrame(parent, text="Veritabanı Bilgisi", padx=10, pady=10)
         right_frame.pack(side='right', fill='both', expand=True, padx=(0,20), pady=20)
         
-        # Log text alanı
-        self.log_text = scrolledtext.ScrolledText(right_frame, wrap=tk.WORD, 
-                                                   font=("Courier New", 9), 
-                                                   bg="#1e1e1e", fg="#00ff00",
+        self.info_text = scrolledtext.ScrolledText(right_frame, wrap=tk.WORD, 
+                                                   font=("Consolas", 10), 
+                                                   bg="#f5f5f5", fg="#333",
                                                    height=30)
-        self.log_text.pack(fill='both', expand=True)
+        self.info_text.pack(fill='both', expand=True)
     
-    def log(self, message):
-        """Log mesajı ekle"""
-        if hasattr(self, 'log_text'):
-            self.log_text.insert(tk.END, message + "\n")
-            self.log_text.see(tk.END)
-            self.root.update()
-        print(message)  # Konsola da yazdır
+    def setup_database_info_panel(self, parent):
+        # Veritabanı detay panelini oluşturur
+        right_frame = tk.LabelFrame(parent, text="Veritabanı Detayları", padx=10, pady=10)
+        right_frame.pack(side='right', fill='both', expand=True, padx=(0,20), pady=20)
+        self.db_info_text = scrolledtext.ScrolledText(right_frame, wrap=tk.WORD, 
+                                                   font=("Consolas", 9), 
+                                                   bg="#f5f5f5", fg="#333",
+                                                   height=30)
+        self.db_info_text.pack(fill='both', expand=True)
     
+    def update_info_panel(self):
+        # Veritabanı bilgilerini günceller ve gösterir
+        if not hasattr(self, 'info_text'):
+            return
+            
+        self.info_text.delete(1.0, tk.END)
+        
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Genel bilgiler
+            cursor.execute("SELECT COUNT(*), SUM(kontenjan), SUM(kalan_kontenjan) FROM firmalar")
+            firma_count, toplam_kontenjan, kalan_kontenjan = cursor.fetchone()
+            toplam_kontenjan = toplam_kontenjan or 0
+            kalan_kontenjan = kalan_kontenjan or 0
+            
+            cursor.execute("SELECT COUNT(*) FROM ogrenciler")
+            ogrenci_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM ogrenciler WHERE durum='Yerlestirildi'")
+            yerlesen_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM ogrenciler WHERE durum='Yerlesemedi'")
+            yerlesemeyen_count = cursor.fetchone()[0]
+            
+            # Başlık
+            info = "VERİTABANI DURUMU\n" + "="*70 + "\n\n"
+            
+            info += f"FİRMALAR: {firma_count} | KONTENJAN: {toplam_kontenjan} | KALAN: {kalan_kontenjan}\n"
+            info += f"ÖĞRENCİLER: {ogrenci_count} | YERLEŞEN: {yerlesen_count} | YERLEŞEMEYEN: {yerlesemeyen_count}\n"
+            
+            if ogrenci_count > 0:
+                oran = (yerlesen_count / ogrenci_count) * 100
+                info += f"YERLEŞME ORANI: %{oran:.1f}\n"
+            
+            info += "\n" + "-"*70 + "\n"
+            
+            # Firma detayları
+            cursor.execute("""
+                SELECT f.id, f.firma_adi, f.kontenjan, f.kalan_kontenjan, 
+                       (f.kontenjan - f.kalan_kontenjan) as dolu, f.min_ort
+                FROM firmalar f
+                ORDER BY f.id
+            """)
+            firmalar = cursor.fetchall()
+            
+            if firmalar:
+                info += "\nFİRMA BİLGİLERİ:\n" + "-"*70 + "\n"
+                for firma_id, firma_adi, kontenjan, kalan, dolu, min_ort in firmalar:
+                    info += f"[{firma_id}] {firma_adi}: {dolu}/{kontenjan}  Min GPA: {min_ort:.2f}\n"
+                info += "\n" + "-"*70 + "\n"
+            
+            # Yerleşenler listesi
+            if yerlesen_count > 0:
+                info += f"\nYERLEŞENLER ({yerlesen_count}):\n" + "-"*70 + "\n"
+                cursor.execute("""
+                    SELECT o.ogrenci_adi, o.ort, f.firma_adi, o.tercihler, o.yerlesen_firma_id
+                    FROM ogrenciler o
+                    LEFT JOIN firmalar f ON o.yerlesen_firma_id = f.id
+                    WHERE o.durum = 'Yerlestirildi'
+                    ORDER BY o.ort DESC
+                """)
+                
+                for i, (ad, ort, firma, tercihler, firma_id) in enumerate(cursor.fetchall(), 1):
+                    tercih_info = ""
+                    if tercihler and firma_id:
+                        try:
+                            tercih_list = [int(t.strip()) for t in str(tercihler).split(",") if t.strip()]
+                            tercih_str = ",".join(map(str, tercih_list))
+                            if firma_id in tercih_list:
+                                sira = tercih_list.index(firma_id) + 1
+                                tercih_info = f" Tercihler:({tercih_str}) [{sira}. tercih]"
+                            else:
+                                tercih_info = f" Tercihler:({tercih_str})"
+                        except:
+                            pass
+                    info += f"{i:3}. {ad:25} (GPA: {ort:.2f}){tercih_info} -> {firma}\n"
+            
+            # Yerleşemeyenler listesi
+            if yerlesemeyen_count > 0:
+                info += f"\nYERLEŞEMEYENLER ({yerlesemeyen_count}):\n" + "-"*70 + "\n"
+                cursor.execute("""
+                    SELECT o.ogrenci_adi, o.ort, o.tercihler
+                    FROM ogrenciler o
+                    WHERE o.durum = 'Yerlesemedi'
+                    ORDER BY o.ort DESC
+                """)
+                
+                for i, (ad, ort, tercihler) in enumerate(cursor.fetchall(), 1):
+                    tercih_str = ""
+                    if tercihler:
+                        try:
+                            tercih_list = [int(t.strip()) for t in str(tercihler).split(",") if t.strip()]
+                            tercih_str = " Tercihler:(" + ",".join(map(str, tercih_list)) + ")"
+                        except:
+                            pass
+                    info += f"{i:3}. {ad:25} (GPA: {ort:.2f}){tercih_str}\n"
+            
+            conn.close()
+            
+            self.info_text.insert(tk.END, info)
+            
+        except Exception as e:
+            self.info_text.insert(tk.END, f"Hata: {str(e)}")
+    
+    def update_database_info(self):
+        """Veritabanı detaylarını güncelle"""
+        if hasattr(self, 'db_info_text'):
+            self.db_info_text.delete(1.0, tk.END)
+            
+            try:
+                conn = get_connection()
+                cursor = conn.cursor()
+                
+                info = "╭──────────────────────────────────────────╮\n"
+                info += "│      VERİTABANI DETAYLI BİLGİLER         │\n"
+                info += "╰──────────────────────────────────────────╯\n\n"
+                
+                info += "FİRMALAR:\n"
+                info += "─" * 60 + "\n"
+                cursor.execute("SELECT firma_adi, kontenjan, kalan_kontenjan, min_ort FROM firmalar ORDER BY firma_adi")
+                firmalar = cursor.fetchall()
+                
+                if firmalar:
+                    for firma_adi, kontenjan, kalan, min_ort in firmalar:
+                        dolu = kontenjan - kalan
+                        doluluk = (dolu / kontenjan * 100) if kontenjan > 0 else 0
+                        info += f"  {firma_adi:20} | Kont: {kontenjan:2} | Dolu: {dolu:2} ({doluluk:5.1f}%) | Min GPA: {min_ort:.2f}\n"
+                else:
+                    info += "  (Henüz firma verisi yok)\n"
+                
+                info += "\n"
+                
+                info += "ÖĞRENCİLER (ÖZET):\n"
+                info += "─" * 60 + "\n"
+                
+                cursor.execute("SELECT COUNT(*), AVG(ort) FROM ogrenciler")
+                total, avg_ort = cursor.fetchone()
+                avg_ort = avg_ort or 0
+                
+                cursor.execute("SELECT COUNT(*) FROM ogrenciler WHERE durum='Yerlestirildi'")
+                yerlesen = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM ogrenciler WHERE durum='Yerlesemedi'")
+                yerlesemeyen = cursor.fetchone()[0]
+                
+                info += f"  Toplam Öğrenci: {total}\n"
+                info += f"  Ortalama GPA: {avg_ort:.2f}\n"
+                info += f"  Yerleşen: {yerlesen}\n"
+                info += f"  Yerleşemeyen: {yerlesemeyen}\n"
+                
+                conn.close()
+                
+                self.db_info_text.insert(tk.END, info)
+                
+            except Exception as e:
+                self.db_info_text.insert(tk.END, f"Bilgi alınamadı: {str(e)}")
+    
+    def show_random_data_dialog(self):
+        # Random veri oluşturur (10 firma, otomatik öğrenci)
+        try:
+            result = self.random_generator.generate_all(firma_count=10, ogrenci_count=None)
+                
+            actual_ogrenci = result['stats']['ogrenci_count']
+            toplam_kontenjan = result['stats']['toplam_kontenjan']
+            
+            self.firma_yuklendi = True
+            self.ogrenci_yuklendi = True
+            
+            self.firma_btn.config(text="Firmalar Yüklendi (Random)", bg="#2E7D32")
+            self.ogrenci_btn.config(text="Öğrenciler Yüklendi (Random)", bg="#1565C0")
+            self.sim_start_btn.pack(pady=(20,10))
+            
+            self.update_info_panel()
+            
+        except Exception as e:
+                messagebox.showerror("Hata", f"Random veri oluşturma hatası: {str(e)}")
+        
+    def show_random_data_dialog(self):
+        # Random veri oluşturur (10 firma, otomatik öğrenci)
+        try:
+            result = self.random_generator.generate_all(firma_count=10, ogrenci_count=None)
+            
+            firma_count = result['stats']['firma_count']
+            actual_ogrenci = result['stats']['ogrenci_count']
+            toplam_kontenjan = result['stats']['toplam_kontenjan']
+            
+            self.firma_yuklendi = True
+            self.ogrenci_yuklendi = True
+            
+            self.firma_btn.config(text="Firmalar Yüklendi (Random)", bg="#2E7D32")
+            self.ogrenci_btn.config(text="Öğrenciler Yüklendi (Random)", bg="#1565C0")
+            self.sim_start_btn.pack(pady=(20,10))
+            
+            self.update_info_panel()
+            
+            messagebox.showinfo("Başarılı", 
+                f"{firma_count} firma oluşturuldu\n"
+                f"Toplam kontenjan: {toplam_kontenjan}\n"
+                f"{actual_ogrenci} öğrenci oluşturuldu\n"
+                f"Oran: {actual_ogrenci/toplam_kontenjan:.2f}x")
+            
+        except Exception as e:
+            messagebox.showerror("Hata", f"Random veri oluşturma hatası: {str(e)}")
+    
+    def clear_database(self):
+        # Veritabanındaki tüm verileri temizler
+        if messagebox.askyesno("Onay", "Tüm veriler silinecek. Emin misiniz?"):
+            try:
+                conn = get_connection()
+                cursor = conn.cursor()
+                
+                cursor.execute("DELETE FROM ogrenciler")
+                cursor.execute("DELETE FROM firmalar")
+                cursor.execute("UPDATE firmalar SET kalan_kontenjan = kontenjan")
+                
+                conn.commit()
+                conn.close()
+                
+                self.firma_yuklendi = False
+                self.ogrenci_yuklendi = False
+                
+                self.firma_btn.config(text="Firmalar Dosyası Seç", bg="#4CAF50")
+                self.ogrenci_btn.config(text="Öğrenciler Dosyası Seç", bg="#2196F3")
+                self.sim_start_btn.pack_forget()
+                
+                self.update_info_panel()
+                
+                messagebox.showinfo("Başarılı", "Veritabanı temizlendi!")
+                
+            except Exception as e:
+                messagebox.showerror("Hata", f"Temizleme hatası: {str(e)}")
+    
+    def show_export_options(self, format_type):
+        # Export format seçim penceresini açar
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Export - {format_type.upper()}")
+        dialog.geometry("350x200")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        tk.Label(dialog, text="Ne export etmek istersiniz?", 
+                font=("Arial", 12, "bold")).pack(pady=20)
+        
+        tk.Button(dialog, text="Yerleşenler", 
+                 command=lambda: [self.export_yerlesenler(format_type), dialog.destroy()],
+                 bg="#4CAF50", fg="white", width=20, height=2).pack(pady=5)
+        
+        tk.Button(dialog, text="Yerleşemeyenler", 
+                 command=lambda: [self.export_yerlesemeyenler(format_type), dialog.destroy()],
+                 bg="#FF5722", fg="white", width=20, height=2).pack(pady=5)
+    
+    def export_yerlesenler(self, format_type):
+        # Yerleşenleri belirtilen formatta dışa aktarır
+        try:
+            if format_type == "excel":
+                ext = ".xlsx"
+                file_filter = ("Excel", "*.xlsx")
+            elif format_type == "csv":
+                ext = ".csv"
+                file_filter = ("CSV", "*.csv")
+            else:
+                ext = ".json"
+                file_filter = ("JSON", "*.json")
+            
+            dosya_yolu = filedialog.asksaveasfilename(
+                title="Yerleşenler - Export dosyası kaydet",
+                defaultextension=ext,
+                filetypes=[file_filter],
+                initialfile=f"yerlesenler{ext}"
+            )
+            
+            if dosya_yolu:
+                self.export_service.export_data_yerlesenler(dosya_yolu, format_type)
+                messagebox.showinfo("Başarılı", f"Yerleşenler {format_type.upper()} formatında export edildi!")
+        except Exception as e:
+            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
+    
+     # Yerleşemeyenleri belirtilen formatta dışa aktarır
+    def export_yerlesemeyenler(self, format_type):
+        try:
+            if format_type == "excel":
+                ext = ".xlsx"
+                file_filter = ("Excel", "*.xlsx")
+            elif format_type == "csv":
+                ext = ".csv"
+                file_filter = ("CSV", "*.csv")
+            else:
+                ext = ".json"
+                file_filter = ("JSON", "*.json")
+            
+            dosya_yolu = filedialog.asksaveasfilename(
+                title="Yerleşemeyenler - Export dosyası kaydet",
+                defaultextension=ext,
+                filetypes=[file_filter],
+                initialfile=f"yerlesemeyenler{ext}"
+            )
+            
+            if dosya_yolu:
+                self.export_service.export_data_yerlesemeyenler(dosya_yolu, format_type)
+                messagebox.showinfo("Başarılı", f"Yerleşemeyenler {format_type.upper()} formatında export edildi!")
+        except Exception as e:
+            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
+    
+    # Ekrandaki tüm bileşenleri temizler
     def clear_screen(self):
-        """Tüm widget'ları temizle"""
         for widget in self.root.winfo_children():
             widget.destroy()
     
     def dosya_sec(self, tür):
-        """Dosya seç ve yükle"""
+        # Kullanıcıdan dosya seçmesini ister
         dosya_yolu = filedialog.askopenfilename(
             title=f"{tür.capitalize()} dosyası seçin",
             filetypes=[
@@ -197,163 +529,105 @@ class Gui:
             self.dosya_isle(dosya_yolu, tür)
 
     def dosya_isle(self, dosya_yolu, tür):
-        """Dosyayı ImportService üzerinden işler"""
+        # Seçilen dosyayı içe aktarır
         try:
-            self.log(f"\n{'='*50}")
-            self.log(f"{tür.upper()} DOSYASI YÜKLENİYOR...")
-            self.log(f"Dosya: {dosya_yolu}")
-            
             self.import_service.import_data(dosya_yolu, tür)
             
-            self.log(f"OK {tür.capitalize()} dosyası başarıyla yüklendi!")
             messagebox.showinfo("Başarılı", f"{tür.capitalize()} dosyası başarıyla yüklendi!")
             
-            # Durumu güncelle
             if tür == "firmalar":
                 self.firma_yuklendi = True
-                self.firma_btn.config(text="OK Firmalar Yüklendi", bg="#2E7D32")
-                self.log("Firmalar veritabanına kaydedildi.")
+                self.firma_btn.config(text="Firmalar Yüklendi", bg="#2E7D32")
             elif tür == "ogrenciler":
                 self.ogrenci_yuklendi = True
-                self.ogrenci_btn.config(text="OK Öğrenciler Yüklendi", bg="#1565C0")
-                self.log("Öğrenciler veritabanına kaydedildi.")
+                self.ogrenci_btn.config(text="Öğrenciler Yüklendi", bg="#1565C0")
             
-            # İkisi de yüklendiyse simülasyon butonunu göster
             if self.firma_yuklendi and self.ogrenci_yuklendi:
-                self.sim_start_btn.pack(pady=20)
-                self.log("\nOK Tüm dosyalar yüklendi! Simülasyon başlatabilirsiniz.")
+                self.sim_start_btn.pack(pady=(20,10))
+            
+            self.update_info_panel()
                 
         except Exception as e:
-            self.log(f"X HATA: {str(e)}")
             messagebox.showerror("Hata", str(e))
     
     def run_greedy(self):
-        """Greedy algoritmasını çalıştır"""
+        # Greedy algoritmasını çalıştırır
         try:
             from greedy import Greedy
-            
-            self.log("\n" + "="*50)
-            self.log("GREEDY ALGORİTMASI BAŞLADI")
-            self.log("="*50)
             
             greedy = Greedy()
             greedy.yerlestir()
             
-            # İstatistik göster
             stats = self.get_stats()
-            self.log(f"\nOK Greedy algoritması tamamlandı!")
-            self.log(f"  Yerleşen: {stats['yerlesen']}")
-            self.log(f"  Yerleşemeyen: {stats['yerlesemeyen']}")
-            self.log(f"  Başarı Oranı: %{stats['oran']:.1f}")
             
             messagebox.showinfo("Başarılı", 
-                f"Greedy algoritması tamamlandı!\n\nYerleşen: {stats['yerlesen']}\nYerleşemeyen: {stats['yerlesemeyen']}\nOran: %{stats['oran']:.1f}")
+                f"Greedy algoritması tamamlandı!\n\n"
+                f"Yerleşen: {stats['yerlesen']}\n"
+                f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
+                f"Başarı Oranı: %{stats['oran']:.1f}")
+            
+            self.update_info_panel()
+            
         except Exception as e:
-            self.log(f"X HATA: {str(e)}")
             messagebox.showerror("Hata", f"Greedy hatası: {str(e)}")
     
     def run_heuristik(self):
-        """Heuristik algoritmasını çalıştır"""
+        # Heuristik algoritmasını çalıştırır
         try:
             from heuristik import Heuristik
-            
-            self.log("\n" + "="*50)
-            self.log("HEURİSTİK ALGORİTMASI BAŞLADI")
-            self.log("="*50)
             
             heuristik = Heuristik()
             heuristik.yerlestir()
             
-            # İstatistik göster
             stats = self.get_stats()
-            self.log(f"\nOK Heuristik algoritması tamamlandı!")
-            self.log(f"  Yerleşen: {stats['yerlesen']}")
-            self.log(f"  Yerleşemeyen: {stats['yerlesemeyen']}")
-            self.log(f"  Başarı Oranı: %{stats['oran']:.1f}")
             
             messagebox.showinfo("Başarılı", 
-                f"Heuristik algoritması tamamlandı!\n\nYerleşen: {stats['yerlesen']}\nYerleşemeyen: {stats['yerlesemeyen']}\nOran: %{stats['oran']:.1f}")
+                f"Heuristik algoritması tamamlandı!\n\n"
+                f"Yerleşen: {stats['yerlesen']}\n"
+                f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
+                f"Başarı Oranı: %{stats['oran']:.1f}")
+            
+            self.update_info_panel()
+            
         except Exception as e:
-            self.log(f"X HATA: {str(e)}")
             messagebox.showerror("Hata", f"Heuristik hatası: {str(e)}")
     
     def run_reject(self):
-        """Reject simülasyonunu çalıştır"""
+        # Reject simülasyonunu çalıştırır
         try:
-            self.log("\n" + "="*50)
-            self.log("REJECT SİMÜLASYONU BAŞLADI")
-            self.log("="*50)
-            
             stats_before = self.get_stats()
-            self.log(f"Başlangıç: Yerleşen={stats_before['yerlesen']}")
             
             self.simulation.reject_simulation()
             
             stats_after = self.get_stats()
             rejected_count = stats_before['yerlesen'] - stats_after['yerlesen']
-            self.log(f"OK {rejected_count} öğrenci reddedildi")
-            self.log(f"Yeni durum: Yerleşen={stats_after['yerlesen']}, Yerleşemeyen={stats_after['yerlesemeyen']}")
             
-            self.log("\nOK Reject simülasyonu tamamlandı!")
             messagebox.showinfo("Başarılı", 
-                f"Reject simülasyonu tamamlandı!\n\n{rejected_count} öğrenci reddedildi")
+                f"Reject simülasyonu tamamlandı!\n\n"
+                f"{rejected_count} öğrenci reddedildi\n"
+                f"Yeni durum: Yerleşen={stats_after['yerlesen']}, "
+                f"Yerleşemeyen={stats_after['yerlesemeyen']}")
+            
+            self.update_info_panel()
+            
         except Exception as e:
-            self.log(f"X HATA: {str(e)}")
             messagebox.showerror("Hata", f"Reject hatası: {str(e)}")
     
     def run_ort_dusur(self):
         """Minimum ortalama düşürme işlemi"""
         try:
-            self.log("\n" + "="*50)
-            self.log("MİNİMUM ORTALAMA AZALTMA BAŞLADI")
-            self.log("="*50)
-            
             self.simulation.reduce_min_ort()
             
-            self.log("OK Tüm firmaların min_ort değeri %10 azaltıldı")
             messagebox.showinfo("Başarılı", "Tüm firmaların min_ort değeri %10 azaltıldı!")
+            
+            self.update_info_panel()
+            self.update_database_info()
+            
         except Exception as e:
-            self.log(f"X HATA: {str(e)}")
             messagebox.showerror("Hata", f"Ort düşürme hatası: {str(e)}")
     
-    def export(self, format_type):
-        """Veriyi export et"""
-        try:
-            # Uzantı belirle
-            if format_type == "excel":
-                ext = ".xlsx"
-                file_filter = ("Excel", "*.xlsx")
-            elif format_type == "csv":
-                ext = ".csv"
-                file_filter = ("CSV", "*.csv")
-            else:
-                ext = ".json"
-                file_filter = ("JSON", "*.json")
-            
-            dosya_yolu = filedialog.asksaveasfilename(
-                title="Export dosyası kaydet",
-                defaultextension=ext,
-                filetypes=[file_filter]
-            )
-            
-            if dosya_yolu:
-                self.log(f"\n{'='*50}")
-                self.log(f"EXPORT BAŞLADI ({format_type.upper()})")
-                self.log(f"Dosya: {dosya_yolu}")
-                
-                # Yerleşenleri export et
-                self.export_service.export_data_yerlesenler(dosya_yolu, format_type)
-                
-                self.log(f"OK Veriler {format_type.upper()} formatında export edildi!")
-                messagebox.showinfo("Başarılı", f"Veriler {format_type.upper()} formatında export edildi!")
-        except Exception as e:
-            self.log(f"X Export hatası: {str(e)}")
-            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
-    
     def get_stats(self):
-        """Yerleşme istatistiklerini al"""
-        from connection import get_connection
-        
+        # Yerleşme istatistiklerini hesaplar
         conn = get_connection()
         cursor = conn.cursor()
         
@@ -374,84 +648,12 @@ class Gui:
             'toplam': toplam,
             'oran': oran
         }
-    
-    def show_results(self):
-        """Detaylı sonuçları göster"""
-        try:
-            from connection import get_connection
-            
-            self.log("\n" + "="*50)
-            self.log("DETAYLI SONUÇLAR")
-            self.log("="*50)
-            
-            conn = get_connection()
-            cursor = conn.cursor()
-            
-            # Genel istatistikler
-            stats = self.get_stats()
-            self.log(f"\n GENEL İSTATİSTİKLER:")
-            self.log(f"  Toplam Öğrenci: {stats['toplam']}")
-            self.log(f"  Yerleşen: {stats['yerlesen']} (%{stats['oran']:.1f})")
-            self.log(f"  Yerleşemeyen: {stats['yerlesemeyen']} (%{100-stats['oran']:.1f})")
-            
-            # Firmalara göre yerleşme
-            self.log(f"\n FİRMALARA GÖRE YERLEŞME:")
-            cursor.execute("""
-                SELECT f.firma_adi, f.kontenjan, f.kalan_kontenjan, 
-                       (f.kontenjan - f.kalan_kontenjan) as dolu
-                FROM firmalar f
-                ORDER BY dolu DESC
-            """)
-            firmalar = cursor.fetchall()
-            
-            for firma_adi, kontenjan, kalan, dolu in firmalar:
-                doluluk = (dolu / kontenjan * 100) if kontenjan > 0 else 0
-                self.log(f"  {firma_adi:20} > {dolu}/{kontenjan} (%{doluluk:.0f}) [Kalan: {kalan}]")
-            
-            # En yüksek notta yerleşenler
-            self.log(f"\n EN YÜKSEK NOTLU YERLEŞENLER (İlk 10):")
-            cursor.execute("""
-                SELECT o.ogrenci_adi, o.ort, f.firma_adi
-                FROM ogrenciler o
-                LEFT JOIN firmalar f ON o.yerlesen_firma_id = f.id
-                WHERE o.durum = 'Yerlestirildi'
-                ORDER BY o.ort DESC
-                LIMIT 10
-            """)
-            yerlesenler = cursor.fetchall()
-            
-            for i, (ad, ort, firma) in enumerate(yerlesenler, 1):
-                self.log(f"  {i:2}. {ad:20} (GPA: {ort:.2f}) > {firma}")
-            
-            # Yerleşemeyenler
-            self.log(f"\n YERLEŞEMEYENLER (İlk 10):")
-            cursor.execute("""
-                SELECT o.ogrenci_adi, o.ort, o.tercihler
-                FROM ogrenciler o
-                WHERE o.durum = 'Yerlesemedi'
-                ORDER BY o.ort DESC
-                LIMIT 10
-            """)
-            yerlesemeyenler = cursor.fetchall()
-            
-            for i, (ad, ort, tercihler) in enumerate(yerlesemeyenler, 1):
-                self.log(f"  {i:2}. {ad:20} (GPA: {ort:.2f}) - Tercihler: {tercihler}")
-            
-            conn.close()
-            
-            messagebox.showinfo("Sonuçlar", 
-                f"Detaylı sonuçlar log panelinde gösteriliyor.\n\n"
-                f"Toplam: {stats['toplam']}\n"
-                f"Yerleşen: {stats['yerlesen']} (%{stats['oran']:.1f})\n"
-                f"Yerleşemeyen: {stats['yerlesemeyen']}")
-                
-        except Exception as e:
-            self.log(f"X HATA: {str(e)}")
-            messagebox.showerror("Hata", f"Sonuç gösterme hatası: {str(e)}")
 
+    # Ana pencereyi çalıştırır
     def run(self):
         self.root.mainloop()
 
 if __name__ == "__main__":
     app = Gui()
     app.run()
+
