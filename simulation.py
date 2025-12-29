@@ -8,10 +8,12 @@ class Simulation:
         self.classification = classification.Classification()
 
     def reject_simulation(self):
-        # Her firmadan rastgele sayıda öğrenci reddeder
+        # Her firmadan rastgele sayıda öğrenci reddeder ve reddedilenlerin listesini döndürür
         conn = get_connection()
         cursor = conn.cursor()
         firmalar = self.classification.get_firmalar()
+        reddedilenler = []  # Reddedilen öğrencilerin listesi
+        
         for firma in firmalar:  
             ogrenciler = self.classification.get_firma_ogrenciler(firma.id)
             if(len(ogrenciler)==0):
@@ -21,6 +23,14 @@ class Simulation:
                 r=random.randint(0,len(ogrenciler)-1)
                 ogrenci = ogrenciler[r]
                 ogrenciler.pop(r)
+                
+                # Reddedilen öğrenciyi listeye ekle
+                reddedilenler.append({
+                    'id': ogrenci.id,
+                    'ad': ogrenci.ogrenci_adi,
+                    'firma': firma.firma_adi
+                })
+                
                 ogrenci.yerlesen_firma_id = None
                 ogrenci.durum = "Yerlesemedi"
                 cursor.execute("UPDATE ogrenciler SET yerlesen_firma_id=?, durum=? WHERE id=?",
@@ -31,6 +41,7 @@ class Simulation:
                 
                 conn.commit()
         conn.close()
+        return reddedilenler
 
     def reduce_min_ort(self):
         # Tüm firmaların minimum ortalama şartını %10 düşürür

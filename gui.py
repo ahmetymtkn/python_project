@@ -556,7 +556,7 @@ class Gui:
             from greedy import Greedy
             
             greedy = Greedy()
-            greedy.yerlestir()
+            yerlestirilen = greedy.yerlestir()
             
             stats = self.get_stats()
             
@@ -564,9 +564,26 @@ class Gui:
                 f"Greedy algoritması tamamlandı!\n\n"
                 f"Yerleşen: {stats['yerlesen']}\n"
                 f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
-                f"Başarı Oranı: %{stats['oran']:.1f}")
+                f"Başarı Oranı: %{stats['oran']:.1f}\n"
+                f"\u0130şlem Sayısı: {greedy.islem_sayisi}\n"
+                f"Çalışma Süresi: {greedy.calisma_suresi:.4f} saniye")
             
             self.update_info_panel()
+            
+            # Sonuçları kaydet karşılaştırma için
+            if not hasattr(self, 'algorithm_results'):
+                self.algorithm_results = {}
+            self.algorithm_results['greedy'] = {
+                'yerlesen': stats['yerlesen'],
+                'yerlesemeyen': stats['yerlesemeyen'],
+                'oran': stats['oran'],
+                'islem_sayisi': greedy.islem_sayisi,
+                'sure': greedy.calisma_suresi
+            }
+            
+            # Eğer heuristik de varsa karşılaştır
+            if 'heuristik' in self.algorithm_results:
+                self.show_comparison()
             
         except Exception as e:
             messagebox.showerror("Hata", f"Greedy hatası: {str(e)}")
@@ -577,7 +594,7 @@ class Gui:
             from heuristik import Heuristik
             
             heuristik = Heuristik()
-            heuristik.yerlestir()
+            yerlestirilen = heuristik.yerlestir()
             
             stats = self.get_stats()
             
@@ -585,9 +602,26 @@ class Gui:
                 f"Heuristik algoritması tamamlandı!\n\n"
                 f"Yerleşen: {stats['yerlesen']}\n"
                 f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
-                f"Başarı Oranı: %{stats['oran']:.1f}")
+                f"Başarı Oranı: %{stats['oran']:.1f}\n"
+                f"\u0130şlem Sayısı: {heuristik.islem_sayisi}\n"
+                f"Çalışma Süresi: {heuristik.calisma_suresi:.4f} saniye")
             
             self.update_info_panel()
+            
+            # Sonuçları kaydet karşılaştırma için
+            if not hasattr(self, 'algorithm_results'):
+                self.algorithm_results = {}
+            self.algorithm_results['heuristik'] = {
+                'yerlesen': stats['yerlesen'],
+                'yerlesemeyen': stats['yerlesemeyen'],
+                'oran': stats['oran'],
+                'islem_sayisi': heuristik.islem_sayisi,
+                'sure': heuristik.calisma_suresi
+            }
+            
+            # Eğer greedy de varsa karşılaştır
+            if 'greedy' in self.algorithm_results:
+                self.show_comparison()
             
         except Exception as e:
             messagebox.showerror("Hata", f"Heuristik hatası: {str(e)}")
@@ -597,16 +631,25 @@ class Gui:
         try:
             stats_before = self.get_stats()
             
-            self.simulation.reject_simulation()
+            reddedilenler = self.simulation.reject_simulation()
             
             stats_after = self.get_stats()
             rejected_count = stats_before['yerlesen'] - stats_after['yerlesen']
+            
+            # Reddedilen öğrencilerin detaylarını hazırla
+            red_detay = ""
+            if reddedilenler:
+                red_detay = "\n\nReddedilen Öğrenciler:\n"
+                for i, ogr in enumerate(reddedilenler[:10], 1):  # İlk 10'unu göster
+                    red_detay += f"{i}. {ogr['ad']} - {ogr['firma']}\n"
+                if len(reddedilenler) > 10:
+                    red_detay += f"... ve {len(reddedilenler)-10} öğrenci daha"
             
             messagebox.showinfo("Başarılı", 
                 f"Reject simülasyonu tamamlandı!\n\n"
                 f"{rejected_count} öğrenci reddedildi\n"
                 f"Yeni durum: Yerleşen={stats_after['yerlesen']}, "
-                f"Yerleşemeyen={stats_after['yerlesemeyen']}")
+                f"Yerleşemeyen={stats_after['yerlesemeyen']}{red_detay}")
             
             self.update_info_panel()
             
@@ -648,6 +691,50 @@ class Gui:
             'toplam': toplam,
             'oran': oran
         }
+    
+    def show_comparison(self):
+        """Her iki algoritmanın sonuçlarını karşılaştırır"""
+        if not hasattr(self, 'algorithm_results') or len(self.algorithm_results) < 2:
+            return
+        
+        greedy = self.algorithm_results.get('greedy', {})
+        heuristik = self.algorithm_results.get('heuristik', {})
+        
+        comparison = "="*60 + "\n"
+        comparison += "ALGorİTMA KARŞILAŞTIRMASI\n"
+        comparison += "="*60 + "\n\n"
+        
+        comparison += f"{'Metrik':<25} {'Greedy':<15} {'Heuristik':<15}\n"
+        comparison += "-"*60 + "\n"
+        comparison += f"{'Yerleşen':<25} {greedy['yerlesen']:<15} {heuristik['yerlesen']:<15}\n"
+        comparison += f"{'Yerleşemeyen':<25} {greedy['yerlesemeyen']:<15} {heuristik['yerlesemeyen']:<15}\n"
+        comparison += f"{'Başarı Oranı (%)':<25} {greedy['oran']:<15.2f} {heuristik['oran']:<15.2f}\n"
+        comparison += f"{'İşlem Sayısı':<25} {greedy['islem_sayisi']:<15} {heuristik['islem_sayisi']:<15}\n"
+        comparison += f"{'Çalışma Süresi (sn)':<25} {greedy['sure']:<15.4f} {heuristik['sure']:<15.4f}\n"
+        comparison += "\n" + "="*60 + "\n\n"
+        
+        # Kazananları belirle
+        comparison += "KAZANANLAR:\n"
+        comparison += "-"*60 + "\n"
+        
+        if greedy['yerlesen'] > heuristik['yerlesen']:
+            comparison += "✅ Yerleştirme: Greedy\n"
+        elif heuristik['yerlesen'] > greedy['yerlesen']:
+            comparison += "✅ Yerleştirme: Heuristik\n"
+        else:
+            comparison += "⚖️ Yerleştirme: Eşit\n"
+        
+        if greedy['sure'] < heuristik['sure']:
+            comparison += f"⏱️ Hız: Greedy ({greedy['sure']:.4f}s)\n"
+        else:
+            comparison += f"⏱️ Hız: Heuristik ({heuristik['sure']:.4f}s)\n"
+        
+        if greedy['islem_sayisi'] < heuristik['islem_sayisi']:
+            comparison += f"🔢 Verimlilik: Greedy ({greedy['islem_sayisi']} işlem)\n"
+        else:
+            comparison += f"🔢 Verimlilik: Heuristik ({heuristik['islem_sayisi']} işlem)\n"
+        
+        messagebox.showinfo("Algoritma Karşılaştırması", comparison)
 
     # Ana pencereyi çalıştırır
     def run(self):
