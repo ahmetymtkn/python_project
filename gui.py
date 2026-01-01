@@ -5,8 +5,7 @@ from simulation import Simulation
 from ExportService import ExportService
 from RandomDataGenerator import RandomDataGenerator
 from connection import get_connection
-import sys
-from io import StringIO
+
 
 class Gui:
     # Staj eşleştirme sisteminin arayüzünü yönetir

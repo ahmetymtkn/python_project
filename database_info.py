@@ -1,89 +1,126 @@
 import tkinter as tk
-from tkinter import ttk
+from tksheet import Sheet
 from connection import get_connection
 
-def tablo_yukle(tree, tabloadi):
-    # Veritabanı tablosunu TreeView'a yükler
-    tree.delete(*tree.get_children())
-    tree["columns"] = ()
+
+def tablo_olustur(parent, tablo_adi, baslik):
+    frame = tk.LabelFrame(
+        parent,
+        text=baslik,
+        font=("Arial", 11, "bold")
+    )
+    frame.grid(row=0, column=0, sticky="nsew")
+
+    frame.rowconfigure(0, weight=1)
+    frame.columnconfigure(0, weight=1)
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"PRAGMA table_info({tabloadi})")
+    cursor.execute(f"PRAGMA table_info({tablo_adi})")
     kolonlar = [k[1] for k in cursor.fetchall()]
 
-    tree["columns"] = kolonlar
-    tree["show"] = "headings"
-
-    for col in kolonlar:
-        tree.heading(col, text=col)
-        tree.column(col, width=130, anchor="center")
-
-    cursor.execute(f"SELECT * FROM {tabloadi}")
+    cursor.execute(f"SELECT * FROM {tablo_adi}")
     veriler = cursor.fetchall()
-
-    if not veriler:
-        tree.insert(
-            "",
-            tk.END,
-            values=["(Kayıt yok)"] + [""] * (len(kolonlar) - 1)
-        )
-    else:
-        for satir in veriler:
-            tree.insert("", tk.END, values=satir)
-
     conn.close()
 
-pencere = tk.Tk()
-pencere.title("Staj Yerleştirme Sistemi")
-pencere.geometry("1100x600")
+    sheet = Sheet(
+        frame,
+        data=veriler,
+        headers=kolonlar,
+        show_row_index=False,
+        header_height=30,
+        default_header_height=30,
+        table_font=("Arial", 11, "normal"),
+        header_font=("Arial", 12, "bold")
+    )
 
-style = ttk.Style()
-style.theme_use("default")
+    sheet.enable_bindings((
+        "single_select",
+        "row_select",
+        "column_select",
+        "column_width_resize",
+        "arrowkeys",
+        "mousewheel",
+        "right_click_popup_menu"
+    ))
+    
+    # Satır yüksekliğini ayarla
+    sheet.set_options(default_row_height=25)
+    
+    # Başlıkları göster
+    sheet.headers(kolonlar)
 
-style.configure(
-    "Treeview",
-    rowheight=26,
-    bordercolor="gray",
-    borderwidth=1,
-    relief="solid"
-)
-style.configure(
-    "Treeview.Heading",
-    font=("Arial", 10, "bold"),
-    borderwidth=1,
-    relief="solid"
-)
+    sheet.grid(row=0, column=0, sticky="nsew")
 
-# ---------------- FİRMALAR ----------------
-firma_frame = tk.LabelFrame(
-    pencere,
-    text="Firmalar",
-    font=("Arial", 11, "bold"),
-    padx=5,
-    pady=5
-)
-firma_frame.pack(fill="both", expand=True, padx=10, pady=5)
+    # Pencere boyutu değiştiğinde kolonları yeniden ayarla
+    def on_resize(event):
+        # Mevcut genişliği al
+        mevcut_genislik = sheet.winfo_width()
+        kolon_sayisi = len(kolonlar)
+        
+        if kolon_sayisi > 0 and mevcut_genislik > 100:
+            # Her kolona eşit genişlik ver
+            kolon_genisligi = int(mevcut_genislik / kolon_sayisi) - 10
+            for c in range(kolon_sayisi):
+                sheet.column_width(c, width=kolon_genisligi)
+            # Başlıkları tekrar ayarla
+            sheet.headers(kolonlar)
+    
+    # Resize olayını bağla
+    sheet.bind("<Configure>", on_resize)
+    
+    # İlk yüklemede de ayarla
+    sheet.after(100, lambda: on_resize(None))
 
-firma_tree = ttk.Treeview(firma_frame)
-firma_tree.pack(fill="both", expand=True)
+    # Satır şeritleri ve metin ortalama
+    for r in range(len(veriler)):
+        stripe_bg = "#ffffff" if r % 2 == 0 else "#f6f6f6"
+        for c in range(len(kolonlar)):
+            sheet.highlight_cells(r, c, bg=stripe_bg)
+            # Metni ortala
+            sheet.align_cells(r, c, align="center")
 
-# ---------------- ÖĞRENCİLER ----------------
-ogrenci_frame = tk.LabelFrame(
-    pencere,
-    text="Öğrenciler",
-    font=("Arial", 11, "bold"),
-    padx=5,
-    pady=5
-)
-ogrenci_frame.pack(fill="both", expand=True, padx=10, pady=5)
+    # Başlıkları da ortala
+    for c in range(len(kolonlar)):
+        sheet.align_header(c, align="center")
 
-ogrenci_tree = ttk.Treeview(ogrenci_frame)
-ogrenci_tree.pack(fill="both", expand=True)
+    # Durum renklendirme
+    if "durum" in kolonlar:
+        d = kolonlar.index("durum")
+        for r, satir in enumerate(veriler):
+            if str(satir[d]).lower() == "yerlestirildi":
+                sheet.highlight_cells(r, d, bg="#90ee90")
+            elif str(satir[d]).lower() == "yerlesemedi":
+                sheet.highlight_cells(r, d, bg="#f08080")
 
-# İlk yükleme (tablolar boş olsa bile görünür)
-tablo_yukle(firma_tree, "firmalar")
-tablo_yukle(ogrenci_tree, "ogrenciler")
+    return sheet
 
-pencere.mainloop()
+
+def main():
+    pencere = tk.Tk()
+    pencere.title("Staj Yerleştirme Sistemi")
+    pencere.geometry("1100x650")
+
+    pencere.rowconfigure(0, weight=1)
+    pencere.rowconfigure(1, weight=3)
+    pencere.columnconfigure(0, weight=1)
+
+    firma_frame = tk.Frame(pencere)
+    firma_frame.grid(row=0, column=0, sticky="nsew")
+    firma_frame.rowconfigure(0, weight=1)
+    firma_frame.columnconfigure(0, weight=1)
+
+    ogrenci_frame = tk.Frame(pencere)
+    ogrenci_frame.grid(row=1, column=0, sticky="nsew")
+    ogrenci_frame.rowconfigure(0, weight=1)
+    ogrenci_frame.columnconfigure(0, weight=1)
+
+    firma_sheet = tablo_olustur(firma_frame, tablo_adi="firmalar", baslik="Firmalar")
+    ogrenci_sheet = tablo_olustur(ogrenci_frame, tablo_adi="ogrenciler", baslik="Öğrenciler")
+
+    pencere.mainloop()
+
+
+if __name__ == "__main__":
+    main()
