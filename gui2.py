@@ -148,6 +148,10 @@ class Gui:
         tk.Button(sim_button_frame, text="Min Ort Düşür (%10)", 
              command=self.run_ort_dusur,
              bg="#FF9800", fg="white", width=20, height=2).pack(side='left', padx=2)
+
+        tk.Button(sim_button_frame, text="Otomatik Döngü", 
+             command=self.run_auto_loop,
+             bg="#673AB7", fg="white", width=20, height=2).pack(side='left', padx=2)
         
         tk.Label(left_frame, text="━━━ Sonuçlar ve Raporlar ━━━", 
                 font=("Arial", 10, "bold"), fg="#555").pack(pady=(10,2))
@@ -289,6 +293,12 @@ class Gui:
                     self.lbl_heuristik_time.config(text="-")
                     self.lbl_heuristik_sat.config(text="-")
                     self.lbl_heuristik_iter.config(text="-")
+                
+                if hasattr(self, 'algorithm_results'):
+                    self.algorithm_results = {}
+                
+                if hasattr(self, 'lbl_winner'):
+                    self.lbl_winner.config(text="Henüz karşılaştırma yok")
 
                 messagebox.showinfo("Başarılı", "Veritabanı temizlendi!")
                 
@@ -316,55 +326,11 @@ class Gui:
     
     def export_yerlesenler(self, format_type):
         # Yerleşenleri belirtilen formatta dışa aktarır
-        try:
-            if format_type == "excel":
-                ext = ".xlsx"
-                file_filter = ("Excel", "*.xlsx")
-            elif format_type == "csv":
-                ext = ".csv"
-                file_filter = ("CSV", "*.csv")
-            else:
-                ext = ".json"
-                file_filter = ("JSON", "*.json")
-            
-            dosya_yolu = filedialog.asksaveasfilename(
-                title="Yerleşenler - Export dosyası kaydet",
-                defaultextension=ext,
-                filetypes=[file_filter],
-                initialfile=f"yerlesenler{ext}"
-            )
-            
-            if dosya_yolu:
-                self.export_service.export_data_yerlesenler(dosya_yolu, format_type)
-                messagebox.showinfo("Başarılı", f"Yerleşenler {format_type.upper()} formatında export edildi!")
-        except Exception as e:
-            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
+        self._export_generic(format_type, "yerlesenler")
     
      # Yerleşemeyenleri belirtilen formatta dışa aktarır
     def export_yerlesemeyenler(self, format_type):
-        try:
-            if format_type == "excel":
-                ext = ".xlsx"
-                file_filter = ("Excel", "*.xlsx")
-            elif format_type == "csv":
-                ext = ".csv"
-                file_filter = ("CSV", "*.csv")
-            else:
-                ext = ".json"
-                file_filter = ("JSON", "*.json")
-            
-            dosya_yolu = filedialog.asksaveasfilename(
-                title="Yerleşemeyenler - Export dosyası kaydet",
-                defaultextension=ext,
-                filetypes=[file_filter],
-                initialfile=f"yerlesemeyenler{ext}"
-            )
-            
-            if dosya_yolu:
-                self.export_service.export_data_yerlesemeyenler(dosya_yolu, format_type)
-                messagebox.showinfo("Başarılı", f"Yerleşemeyenler {format_type.upper()} formatında export edildi!")
-        except Exception as e:
-            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
+        self._export_generic(format_type, "yerlesemeyenler")
     
     # Ekrandaki tüm bileşenleri temizler
     def clear_screen(self):
@@ -420,7 +386,6 @@ class Gui:
                 tercih_list = [int(t.strip()) for t in str(tercihler).split(",") if t.strip()]
                 if yerlesen_id in tercih_list:
                     rank = tercih_list.index(yerlesen_id) + 1
-                    # Puanlama: 1. tercih 100, 2. tercih 90, ...
                     score = max(0, 110 - rank * 10)
                     total_score += score
             except:
@@ -429,97 +394,14 @@ class Gui:
 
     def run_greedy(self):
         # Greedy algoritmasını çalıştırır
-        try:
-            from greedy import Greedy
-            
-            greedy = Greedy()
-            yerlestirilen = greedy.yerlestir()
-            
-            stats = self.get_stats()
-            satisfaction = self.calculate_satisfaction()
-            
-            messagebox.showinfo("Başarılı", 
-                f"Greedy algoritması tamamlandı!\n\n"
-                f"Yerleşen: {stats['yerlesen']}\n"
-                f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
-                f"Başarı Oranı: %{stats['oran']:.1f}\n"
-                f"İşlem Sayısı: {greedy.islem_sayisi}\n"
-                f"Çalışma Süresi: {greedy.calisma_suresi:.4f} saniye\n"
-                f"Memnuniyet Skoru: {satisfaction}")
-            
-            self.update_info_panel()
-            
-            # UI Güncelle
-            self.lbl_greedy_ops.config(text=str(greedy.islem_sayisi))
-            self.lbl_greedy_time.config(text=f"{greedy.calisma_suresi:.4f}")
-            self.lbl_greedy_sat.config(text=str(satisfaction))
-            self.lbl_greedy_iter.config(text="1") # Tek turda çalışır
-
-            # Sonuçları kaydet karşılaştırma için
-            if not hasattr(self, 'algorithm_results'):
-                self.algorithm_results = {}
-            self.algorithm_results['greedy'] = {
-                'yerlesen': stats['yerlesen'],
-                'yerlesemeyen': stats['yerlesemeyen'],
-                'oran': stats['oran'],
-                'islem_sayisi': greedy.islem_sayisi,
-                'sure': greedy.calisma_suresi,
-                'satisfaction': satisfaction
-            }
-            
-            # Eğer heuristik de varsa karşılaştır
-            if 'heuristik' in self.algorithm_results:
-                self.show_comparison()
-            
-        except Exception as e:
-            messagebox.showerror("Hata", f"Greedy hatası: {str(e)}")
+        from greedy import Greedy
+        self._run_single_algorithm(Greedy, "Greedy")
     
     def run_heuristik(self):
         # Heuristik algoritmasını çalıştırır
-        try:
-            from heuristik import Heuristik
-            
-            heuristik = Heuristik()
-            yerlestirilen = heuristik.yerlestir()
-            
-            stats = self.get_stats()
-            satisfaction = self.calculate_satisfaction()
-            
-            messagebox.showinfo("Başarılı", 
-                f"Heuristik algoritması tamamlandı!\n\n"
-                f"Yerleşen: {stats['yerlesen']}\n"
-                f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
-                f"Başarı Oranı: %{stats['oran']:.1f}\n"
-                f"İşlem Sayısı: {heuristik.islem_sayisi}\n"
-                f"Çalışma Süresi: {heuristik.calisma_suresi:.4f} saniye\n"
-                f"Memnuniyet Skoru: {satisfaction}")
-            
-            self.update_info_panel()
-            
-            # UI Güncelle
-            self.lbl_heuristik_ops.config(text=str(heuristik.islem_sayisi))
-            self.lbl_heuristik_time.config(text=f"{heuristik.calisma_suresi:.4f}")
-            self.lbl_heuristik_sat.config(text=str(satisfaction))
-            self.lbl_heuristik_iter.config(text="1") # Tek turda çalışır
-            
-            # Sonuçları kaydet karşılaştırma için
-            if not hasattr(self, 'algorithm_results'):
-                self.algorithm_results = {}
-            self.algorithm_results['heuristik'] = {
-                'yerlesen': stats['yerlesen'],
-                'yerlesemeyen': stats['yerlesemeyen'],
-                'oran': stats['oran'],
-                'islem_sayisi': heuristik.islem_sayisi,
-                'sure': heuristik.calisma_suresi,
-                'satisfaction': satisfaction
-            }
-            
-            # Eğer greedy de varsa karşılaştır
-            if 'greedy' in self.algorithm_results:
-                self.show_comparison()
-            
-        except Exception as e:
-            messagebox.showerror("Hata", f"Heuristik hatası: {str(e)}")
+        from heuristik import Heuristik
+        self._run_single_algorithm(Heuristik, "Heuristik")
+
     
     def run_reject(self):
         # Reject simülasyonunu çalıştırır
@@ -564,6 +446,80 @@ class Gui:
             
         except Exception as e:
             messagebox.showerror("Hata", f"Ort düşürme hatası: {str(e)}")
+            
+    def run_auto_loop(self):
+        # Otomatik döngü simülasyonu
+        choice = messagebox.askquestion("Algoritma Seçimi", "Otomatik döngü için hangi algoritma kullanılsın?\n\nEvet: Greedy\nHayır: Heuristik", icon='question')
+        algo_type = "greedy" if choice == 'yes' else "heuristik"
+        
+        MAX_ITERATIONS = 50 # Sonsuz döngü koruması
+        iteration = 0
+        stable_counter = 0
+        last_yerlesen = -1
+        
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.insert(tk.END, f"=== OTOMATİK DÖNGÜ BAŞLATILIYOR ({algo_type.upper()}) ===\n")        
+        try:
+            while iteration < MAX_ITERATIONS:
+                iteration += 1
+                self.log_text.insert(tk.END, f"--- TUR {iteration} ---\n")
+                self.log_text.update() # UI güncellensin
+                
+                # 1. Yerleştirme
+                if algo_type == "greedy":
+                    from greedy import Greedy
+                    algo = Greedy()
+                    algo.yerlestir()
+                    algo_name = "Greedy"
+                else:
+                    from heuristik import Heuristik
+                    algo = Heuristik()
+                    algo.yerlestir()
+                    algo_name = "Heuristik"
+                
+                stats = self.get_stats()
+                satisfaction = self.calculate_satisfaction()
+                current_yerlesen = stats['yerlesen']
+                
+                # Karşılaştırma Panelini Güncelle
+                self._update_algorithm_results(algo_name, algo.islem_sayisi, algo.calisma_suresi, stats, satisfaction, 1)
+
+                self.log_text.insert(tk.END, f"{algo_name} Çalıştı. Yerleşen: {current_yerlesen}\n")
+                
+                # 1. Herkes yerleşti mi kontrolü
+                if stats['yerlesemeyen'] == 0:
+                    self.log_text.insert(tk.END, "\n>>> TÜM ÖĞRENCİLER YERLEŞTİ! <<<\n")
+                    break
+
+                # 2. Stabilite Kontrolü
+                if current_yerlesen == last_yerlesen:
+                    stable_counter += 1
+                else:
+                    stable_counter = 0
+                    last_yerlesen = current_yerlesen
+                
+                if stable_counter >= 3:
+                    break
+                
+                # 2. Reject
+                reddedilenler = self.simulation.reject_simulation()
+                rejected_count = len(reddedilenler)
+                self.log_text.insert(tk.END, f"Reject Simülasyonu: {rejected_count} öğrenci reddedildi.\n")
+
+                # 3. Min Ort Düşür
+                self.simulation.reduce_min_ort()
+                self.log_text.insert(tk.END, "Otomatik: Firmaların min_ort değeri %10 düşürüldü.\n")
+                
+                self.update_info_panel()
+                self.root.update() # Arayüzü canlı tut
+                
+            self.log_text.insert(tk.END, f"\n=== SİMÜLASYON TAMAMLANDI ({iteration} Tur) ===\n")
+            self.log_text.see(tk.END)
+            self.update_info_panel()
+            
+        except Exception as e:
+            self.log_text.insert(tk.END, f"\nHATA: {str(e)}\n")
+            messagebox.showerror("Hata", f"Otomatik döngü hatası: {str(e)}")
     
     def get_stats(self):
         # Yerleşme istatistiklerini hesaplar
@@ -628,6 +584,110 @@ class Gui:
             
         if hasattr(self, 'lbl_winner'):
             self.lbl_winner.config(text=summary, fg="#000")
+
+    def _update_algorithm_results(self, algo_name, delta_ops, delta_time, stats, satisfaction, delta_iter=1):
+        """Ortak algoritma sonuç güncelleme ve kaydetme metodu (Kümülatif)"""
+        prefix = "greedy" if algo_name.lower() == "greedy" else "heuristik"
+        
+        # Mevcut değerleri al
+        if not hasattr(self, 'algorithm_results'):
+            self.algorithm_results = {}
+            
+        current_data = self.algorithm_results.get(prefix, {
+            'islem_sayisi': 0,
+            'sure': 0,
+            'iteration': 0
+        })
+        
+        # Kümülatif toplama
+        new_ops = current_data.get('islem_sayisi', 0) + delta_ops
+        new_time = current_data.get('sure', 0) + delta_time
+        new_iter = current_data.get('iteration', 0) + delta_iter
+        
+        # Label güncelleme
+        if hasattr(self, f'lbl_{prefix}_ops'):
+            getattr(self, f'lbl_{prefix}_ops').config(text=str(new_ops))
+            getattr(self, f'lbl_{prefix}_time').config(text=f"{new_time:.4f}")
+            getattr(self, f'lbl_{prefix}_sat').config(text=str(satisfaction))
+            getattr(self, f'lbl_{prefix}_iter').config(text=str(new_iter))
+
+        # Sonuçları kaydet
+        self.algorithm_results[prefix] = {
+            'yerlesen': stats['yerlesen'],
+            'yerlesemeyen': stats['yerlesemeyen'],
+            'oran': stats['oran'],
+            'islem_sayisi': new_ops,
+            'sure': new_time,
+            'satisfaction': satisfaction,
+            'iteration': new_iter
+        }
+        
+        if 'greedy' in self.algorithm_results and 'heuristik' in self.algorithm_results:
+            self.show_comparison()
+
+    def _run_single_algorithm(self, algo_class, algo_name):
+        """Tekil algoritma çalıştırma ve raporlama metodu"""
+        try:
+            algo = algo_class()
+            algo.yerlestir()
+            
+            stats = self.get_stats()
+            satisfaction = self.calculate_satisfaction()
+            
+            # Kümülatif güncelleme için delta değerleri gönderiyoruz
+            self._update_algorithm_results(algo_name, algo.islem_sayisi, algo.calisma_suresi, stats, satisfaction, 1)
+            
+            # Mesaj kutusunda o anki (son) çalışmanın sonuçlarını gösteriyoruz
+            # Ancak toplam değerleri göstermek istersek self.algorithm_results'dan çekebiliriz.
+            # Kullanıcı "tekil adım adım" dediği için, mesaj kutusunda o anki çalışmayı göstermek mantıklı olabilir,
+            # ama panelde kümülatif artacak.
+            
+            messagebox.showinfo("Başarılı", 
+                f"{algo_name} algoritması tamamlandı!\n\n"
+                f"Yerleşen: {stats['yerlesen']}\n"
+                f"Yerleşemeyen: {stats['yerlesemeyen']}\n"
+                f"Başarı Oranı: %{stats['oran']:.1f}\n"
+                f"İşlem Sayısı (Bu Tur): {algo.islem_sayisi}\n"
+                f"Çalışma Süresi (Bu Tur): {algo.calisma_suresi:.4f} saniye\n"
+                f"Memnuniyet Skoru: {satisfaction}")
+            
+            self.update_info_panel()
+            
+        except Exception as e:
+            messagebox.showerror("Hata", f"{algo_name} hatası: {str(e)}")
+
+    def _export_generic(self, format_type, data_type):
+        """Ortak export metodu"""
+        try:
+            if format_type == "excel":
+                ext = ".xlsx"
+                file_filter = ("Excel", "*.xlsx")
+            elif format_type == "csv":
+                ext = ".csv"
+                file_filter = ("CSV", "*.csv")
+            else:
+                ext = ".json"
+                file_filter = ("JSON", "*.json")
+            
+            title_prefix = "Yerleşenler" if data_type == "yerlesenler" else "Yerleşemeyenler"
+            default_filename = f"{data_type}{ext}"
+            
+            dosya_yolu = filedialog.asksaveasfilename(
+                title=f"{title_prefix} - Export dosyası kaydet",
+                defaultextension=ext,
+                filetypes=[file_filter],
+                initialfile=default_filename
+            )
+            
+            if dosya_yolu:
+                if data_type == "yerlesenler":
+                    self.export_service.export_data_yerlesenler(dosya_yolu, format_type)
+                else:
+                    self.export_service.export_data_yerlesemeyenler(dosya_yolu, format_type)
+                    
+                messagebox.showinfo("Başarılı", f"{title_prefix} {format_type.upper()} formatında export edildi!")
+        except Exception as e:
+            messagebox.showerror("Hata", f"Export hatası: {str(e)}")
 
     # Ana pencereyi çalıştırır
     def run(self):
