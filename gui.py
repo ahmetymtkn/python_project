@@ -236,7 +236,7 @@ class Gui:
     def show_random_data_dialog(self):
         # Random veri oluşturur (10 firma, otomatik öğrenci)
         try:
-            result = self.random_generator.generate_all(firma_count=10, ogrenci_count=None)
+            result = self.random_generator.generate_all()
             
             firma_count = result['stats']['firma_count']
             actual_ogrenci = result['stats']['ogrenci_count']
@@ -253,8 +253,7 @@ class Gui:
             messagebox.showinfo("Başarılı", 
                 f"{firma_count} firma oluşturuldu\n"
                 f"Toplam kontenjan: {toplam_kontenjan}\n"
-                f"{actual_ogrenci} öğrenci oluşturuldu\n"
-                f"Oran: {actual_ogrenci/toplam_kontenjan:.2f}x")
+                f"{actual_ogrenci} öğrenci oluşturuldu\n")
             
         except Exception as e:
             messagebox.showerror("Hata", f"Random veri oluşturma hatası: {str(e)}")
