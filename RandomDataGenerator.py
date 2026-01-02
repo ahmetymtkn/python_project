@@ -1,6 +1,4 @@
-# Test amaçlı rastgele veri üreten modül
 import random
-import string
 from connection import get_connection
 
 class RandomDataGenerator:
@@ -13,23 +11,35 @@ class RandomDataGenerator:
             "CodeLab", "ByteForce", "NetPro", "SoftWave", "DigitalHub",
             "CyberTech", "InfoSys", "TechNova", "LogicFlow", "DataDrive",
             "AppMakers", "WebCraft", "DevTeam", "CodeFactory", "TechZone",
-            "SystemPlus", "ProDev", "MegaCode", "EliteIT", "TechPoint"
+            "SystemPlus", "ProDev", "MegaCode", "EliteIT", "TechPoint",
+            "CodeMasters", "NextGen", "BlueChip", "FastCode", "AlphaSoft",
+            "BetaWorks", "GammaTech", "DeltaLabs", "OmegaSys", "PixelPro",
+            "DataHub", "CloudNet", "WebLogic", "SysTech", "InfoWorks",
+            "NetSoft", "CodeStream", "DevHub", "ByteWorks", "DigiTech",
+            "SmartCode", "ProTech", "MegaSoft", "UltraCode", "SuperDev"
         ]
         
         self.isimler = [
             "Ahmet", "Mehmet", "Ali", "Ayşe", "Fatma", "Zeynep", "Burak", "Can",
             "Deniz", "Ece", "Elif", "Emre", "Enes", "Furkan", "Gizem", "Hakan",
             "İrem", "Kaan", "Merve", "Mustafa", "Ömer", "Selin", "Serkan", "Tuna",
-            "Ufuk", "Yağmur", "Yusuf", "Berk", "Cem", "Defne", "Emir", "Esra"
+            "Ufuk", "Yağmur", "Yusuf", "Berk", "Cem", "Defne", "Emir", "Esra",
+            "Onur", "Kerem", "Ceren", "Aylin", "Barış", "Begüm", "Arda", "Aslı",
+            "Tolga", "Derya", "Murat", "Pınar", "Okan", "Şule", "Sinan", "Necla",
+            "Volkan", "Ebru", "Tarık", "Yeliz", "Uğur", "Nihan", "Görkem", "Duygu",
+            "Alper", "Tuğçe", "Erdem", "Seda", "Koray", "İpek", "Çağlar", "Melis"
         ]
         
         self.soyadlar = [
             "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Öztürk", "Aydın",
             "Arslan", "Doğan", "Kılıç", "Aslan", "Koç", "Kurt", "Özdemir", "Polat",
-            "Şen", "Erdoğan", "Çetin", "Ak", "Acar", "Güneş", "Korkmaz", "Bulut"
+            "Şen", "Erdoğan", "Çetin", "Ak", "Acar", "Güneş", "Korkmaz", "Bulut",
+            "Yılmaz", "Tekin", "Tunç", "Sarı", "Kara", "Beyaz", "Öz", "Gül",
+            "Kaya", "Taş", "Dağ", "Deniz", "Orman", "Çevik", "Güven", "Şimşek",
+            "Ateş", "Yıldırım", "Peker", "Kartal", "Bozkurt", "Işık", "Ay", "Yıldız"
         ]
     
-    def generate_random_companies(self, count=10):
+    def generate_random_companies(self, count=40):
         # Belirtilen sayıda rastgele firma oluşturur
         conn = get_connection()
         cursor = conn.cursor()
@@ -46,7 +56,7 @@ class RandomDataGenerator:
                     used_names.add(firma_adi)
                     break
             
-            kontenjan = random.randint(2, 8)
+            kontenjan = random.randint(2,5)
             min_ort = round(random.uniform(2.0, 3.5), 2)
             
             cursor.execute(
@@ -66,7 +76,7 @@ class RandomDataGenerator:
         
         return companies
     
-    def generate_random_students(self, count=50, firma_count=10):
+    def generate_random_students(self, count=100, firma_count=50):
         # Belirtilen sayıda rastgele öğrenci oluşturur
         conn = get_connection()
         cursor = conn.cursor()
@@ -103,20 +113,19 @@ class RandomDataGenerator:
         
         return students
     
-    def generate_all(self, firma_count=10, ogrenci_count=None):
-        # Firma ve öğrencileri birlikte oluşturur, öğrenci sayısı otomatik hesaplanabilir
+    def generate_all(self):
+        # Firma ve öğrencileri birlikte oluşturur
+        # Firma sayısı 30-50 arası random seç
+        firma_count = random.randint(30, 50)
+        
         companies = self.generate_random_companies(firma_count)
         
         toplam_kontenjan = sum(company['kontenjan'] for company in companies)
         
-        if ogrenci_count is None:
-            min_ogrenci = int(toplam_kontenjan * 1.2)
-            max_ogrenci = int(toplam_kontenjan * 1.5)
-            ogrenci_count = random.randint(min_ogrenci, max_ogrenci)
-        else:
-            min_ogrenci = int(toplam_kontenjan * 1.2)
-            if ogrenci_count < min_ogrenci:
-                ogrenci_count = min_ogrenci
+        # Öğrenci sayısını toplam kontenjandan fazla olacak şekilde hesapla
+        carpan = random.uniform(1.2, 1.5)
+        ogrenci_count = int(toplam_kontenjan * carpan)
+        
         
         students = self.generate_random_students(ogrenci_count, firma_count)
         
