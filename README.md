@@ -1,6 +1,6 @@
 # Staj Eşleştirme Sistemi
 
-Bu proje, öğrencileri staj firmalarına tercihlerine ve akademik performanslarına göre optimal bir şekilde yerleştiren kapsamlı bir eşleştirme sistemidir. İki farklı algoritma (Greedy ve Heuristik) kullanarak eşleştirme yapar ve sonuçları karşılaştırır.
+Bu proje, öğrencileri staj firmalarına tercihlerine ve akademik performanslarına göre optimal bir şekilde yerleştiren kapsamlı bir eşleştirme sistemidir. İki farklı algoritma (Greedy ve Heuristik) kullanarak eşleştirme yapar ve sonuçları karşılaştırır. Python Programlama dersi grup ödevidir. [Koray GARİP](https://github.com/korayga) ile birlikte geliştirilmiştir
 
 ## Proje Özellikleri
 
@@ -47,12 +47,12 @@ staj-eslestirme/
 ├── ImportService.py        # Veri içe aktarma
 ├── ExportService.py        # Veri dışa aktarma
 ├── RandomDataGenerator.py  # Test veri üretimi
-├── greedy.py              # Açgözlü algoritma
-├── heuristik.py           # Sezgisel algoritma
-├── simulation.py          # Simülasyon yöneticisi
-├── classification.py      # Veri dönüştürme
-├── siniflar.py           # Veri modelleri
-└── db.db                 # SQLite veritabanı (otomatik oluşur)
+├── greedy.py               # Açgözlü algoritma
+├── heuristik.py            # Sezgisel algoritma
+├── simulation.py           # Simülasyon yöneticisi
+├── classification.py       # Veri dönüştürme
+├── siniflar.py             # Veri modelleri
+└── db.db                   # SQLite veritabanı (otomatik oluşur)
 ```
 
 ## Veritabanı Şeması
@@ -255,4 +255,5 @@ Skor = max(0, 110 - tercih_sırası × 10)
 ### Test Verisi Genişletme
 - `RandomDataGenerator.py` dosyasındaki `firma_isimleri` ve `isimler` listelerini güncelleyin
 - Yeni sektörler ve isim grupları ekleyebilirsiniz
+
 
