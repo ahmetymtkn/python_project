@@ -76,6 +76,57 @@ class RandomDataGenerator:
         
         return companies
     
+    def generate_random_companies_with_quota(self, count=40, total_student_count=100):
+        # Belirtilen sayıda rastgele firma oluşturur, toplam kontenjan = öğrenci sayısı
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM firmalar")
+        
+        companies = []
+        used_names = set()
+        
+        # Toplam kontenjanı öğrenci sayısına eşitle
+        remaining_quota = total_student_count
+        
+        for i in range(count):
+            while True:
+                firma_adi = random.choice(self.firma_isimleri)
+                if firma_adi not in used_names:
+                    used_names.add(firma_adi)
+                    break
+            
+            # Son firmaya kalan kontanjanı ver, diğerlerine eşit dağıt
+            if i == count - 1:
+                kontenjan = remaining_quota
+            else:
+                # Kalan firmalara eşit dağılım için ortalama kontenjan
+                avg_quota = remaining_quota // (count - i)
+                # Biraz varyasyon ekle ama toplamı koru
+                kontenjan = max(1, random.randint(max(1, avg_quota - 2), avg_quota + 2))
+                kontenjan = min(kontenjan, remaining_quota - (count - i - 1))
+            
+            remaining_quota -= kontenjan
+            
+            min_ort = round(random.uniform(2.0, 3.5), 2)
+            
+            cursor.execute(
+                "INSERT INTO firmalar (firma_adi, kontenjan, kalan_kontenjan, min_ort) VALUES (?, ?, ?, ?)",
+                (firma_adi, kontenjan, kontenjan, min_ort)
+            )
+            
+            companies.append({
+                'id': i + 1,
+                'firma_adi': firma_adi,
+                'kontenjan': kontenjan,
+                'min_ort': min_ort
+            })
+        
+        conn.commit()
+        conn.close()
+        
+        return companies
+    
     def generate_random_students(self, count=100, firma_count=50):
         # Belirtilen sayıda rastgele öğrenci oluşturur
         conn = get_connection()
@@ -113,21 +164,15 @@ class RandomDataGenerator:
         
         return students
     
-    def generate_all(self):
+    def generate_all(self, student_count=100, company_count=40):
         # Firma ve öğrencileri birlikte oluşturur
-        # Firma sayısı 30-50 arası random seç
-        firma_count = random.randint(30, 50)
+        # student_count ve company_count parametreli
         
-        companies = self.generate_random_companies(firma_count)
+        companies = self.generate_random_companies_with_quota(company_count, student_count)
         
         toplam_kontenjan = sum(company['kontenjan'] for company in companies)
         
-        # Öğrenci sayısını toplam kontenjandan fazla olacak şekilde hesapla
-        carpan = random.uniform(1.2, 1.5)
-        ogrenci_count = int(toplam_kontenjan * carpan)
-        
-        
-        students = self.generate_random_students(ogrenci_count, firma_count)
+        students = self.generate_random_students(student_count, company_count)
         
         return {
             'companies': companies,
